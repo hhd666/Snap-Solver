@@ -154,6 +154,36 @@
             "defaultTier": "deep",
             "description": "视觉推理专用模型，擅长看图做数理推理"
         },
+        "qwen3.7-plus": {
+            "name": "qwen3.7-plus",
+            "provider": "alibaba",
+            "supportsMultimodal": true,
+            "isReasoning": true,
+            "version": "latest",
+            "reasoningTiers": ["deep", "max"],
+            "defaultTier": "deep",
+            "description": "千问3.7plus"
+        },
+        "qwen3.7-flash": {
+            "name": "qwen3.7-flash",
+            "provider": "alibaba",
+            "supportsMultimodal": true,
+            "isReasoning": true,
+            "version": "latest",
+            "reasoningTiers": ["deep", "max"],
+            "defaultTier": "deep",
+            "description": "千问3.7flash"
+        },
+        "qwen3.7-max": {
+            "name": "qwen3.7-max",
+            "provider": "alibaba",
+            "supportsMultimodal": true,
+            "isReasoning": true,
+            "version": "latest",
+            "reasoningTiers": ["deep", "max"],
+            "defaultTier": "deep",
+            "description": "千问3.7max"
+        },
         "doubao-seed-1-6-250615": {
             "name": "Doubao-Seed-1.6",
             "provider": "doubao",

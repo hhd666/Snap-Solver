@@ -11,6 +11,7 @@
 class SnapSolver {
     constructor() {
         this.socket = null;
+        this.isFristCapture = true;  // 首次截屏时弹出提示
         this.cropper = null;
         this.originalImage = null;      // 回传的电脑全屏原图（data URL），重裁始终基于它
         this.lastCropBoxData = null;    // 上次裁剪框，连刷题预填
@@ -199,7 +200,17 @@ class SnapSolver {
                     if (self.lastCropBoxData) {
                         try { self.cropper.setCropBoxData(self.lastCropBoxData); } catch (e) {}
                     }
+
                     self.scheduleSizeReadout();
+                    if (self.isFristCapture != true) {  // 首次截屏不自动发起解题，避免误操作 
+                        self.sendForSolve();  // 框选完即发起解题
+                        //self.exitWorkspace();  // 退出工作台，进入解答页
+                    }
+                    else {
+                        
+                        self.isFristCapture = false;  // 首次截屏提示后置为 false
+                        self.sendForSolve();  // 框选完即发起解题
+                    }
                 }
             });
         } catch (e) {
@@ -232,6 +243,71 @@ class SnapSolver {
         this.setView(this.hasAnswer ? 'answer' : 'empty');
     }
 
+    async copyImageToClipboard(imageData) {
+        try {
+            // 将 base64 数据转换为 Blob
+            const response = await fetch(imageData);
+            const blob = await response.blob();
+            
+            // 尝试使用 Clipboard API 复制
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    [blob.type]: blob
+                })
+            ]);
+            
+            // 可选：显示成功提示
+            // window.uiManager.showToast('图片已复制到剪贴板', 'success');
+        } catch (e) {
+            console.warn('图片复制失败:', e);
+            // 可选：降级方案 - 使用传统方法复制
+            try {
+                // 创建一个 canvas 来复制图片
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob(async (blob) => {
+                        try {
+                            await navigator.clipboard.write([
+                                new ClipboardItem({
+                                    [blob.type]: blob
+                                })
+                            ]);
+                            // window.uiManager.showToast('图片已复制到剪贴板', 'success');
+                        } catch (err) {
+                            console.warn('降级复制也失败:', err);
+                            // window.uiManager.showToast('图片复制失败，请手动保存', 'warning');
+                        }
+                    });
+                };
+                img.src = imageData;
+            } catch (fallbackErr) {
+                console.warn('所有复制方法都失败:', fallbackErr);
+                // window.uiManager.showToast('图片复制失败，请手动保存', 'warning');
+            }
+        }
+    }
+
+    // 下载方法
+    downloadImage(imageData) {
+        try {
+            const link = document.createElement('a');
+            link.download = `cropped_image_${Date.now()}.png`;
+            link.href = imageData;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            console.warn('图片下载失败:', e);
+            // 可选：显示提示但不影响主流程
+            // window.uiManager.showToast('图片下载失败', 'warning');
+        }
+    };
+
     /* ---------- 发送解题 ---------- */
     sendForSolve() {
         let imageData;
@@ -251,7 +327,9 @@ class SnapSolver {
             window.uiManager.showToast('处理图片出错: ' + e.message, 'error');
             return;
         }
-        this.solveImage(imageData);
+        // this.copyImageToClipboard(imageData);  // 复制图片到剪贴板
+        this.downloadImage(imageData);//下载图片
+        this.solveImage(imageData);// 发起AI解题
     }
 
     // 统一发送入口：框选发送 / 重解 / 换模型重答 共用

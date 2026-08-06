@@ -48,6 +48,8 @@ class AlibabaModel(BaseModel):
         """根据模型名称返回对应的 DashScope API 标识符"""
         # 新版模型 id 与 DashScope 调用名一致，直接透传
         known = {"qwen3-vl-flash", "qwen3-vl-plus", "qvq-max"}
+        # 跳过模型校验，直接返回用户提供的模型名称
+        return self.model_name
         if self.model_name in known:
             return self.model_name
 
