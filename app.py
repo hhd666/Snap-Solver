@@ -13,9 +13,10 @@ import traceback
 import requests
 import faulthandler
 import signal
+from datetime import datetime
 
 # kill -USR1 <pid> 可随时导出全线程堆栈，便于排查生成卡顿
-faulthandler.register(signal.SIGUSR1)
+# faulthandler.register(signal.SIGUSR1)
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True  # 非 debug 下也随文件更新模板，避免改完页面不生效
@@ -29,11 +30,43 @@ socketio = SocketIO(
 )
 
 # 常量定义
+# 获取原项目目录（脚本所在目录）
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.join(CURRENT_DIR, 'config')      # 随仓库分发的只读配置（models/version/提示词种子）
-DATA_DIR = os.path.join(CURRENT_DIR, '.snapsolver')   # 运行期产生的数据：密钥/中转/提示词/更新缓存
-STATIC_DIR = os.path.join(CURRENT_DIR, 'static')
+OLD_CONFIG_DIR = os.path.join(CURRENT_DIR, 'config')
+OLD_DATA_DIR = os.path.join(CURRENT_DIR, '.snapsolver')
+OLD_STATIC_DIR = os.path.join(CURRENT_DIR, 'static')
+
+# 获取用户文档目录下的 snapData 文件夹
+SNAP_DATA_DIR = os.path.join(os.path.expanduser('~'), 'Documents', 'snapData')
+CONFIG_DIR = os.path.join(SNAP_DATA_DIR, 'config')
+DATA_DIR = os.path.join(SNAP_DATA_DIR, '.snapsolver')
+STATIC_DIR = os.path.join(SNAP_DATA_DIR, 'static')
+
+# 检查 snapData 是否存在，不存在则创建并复制
+if not os.path.exists(SNAP_DATA_DIR):
+    print(f"创建 snapData 目录: {SNAP_DATA_DIR}")
+    os.makedirs(SNAP_DATA_DIR, exist_ok=True)
+    # 复制三个文件夹
+    print("正在复制 config 文件夹...")
+    if os.path.exists(OLD_CONFIG_DIR):
+        shutil.copytree(OLD_CONFIG_DIR, CONFIG_DIR)
+    
+    print("正在复制 .snapsolver 文件夹...")
+    if os.path.exists(OLD_DATA_DIR):
+        shutil.copytree(OLD_DATA_DIR, DATA_DIR)
+    
+    print("正在复制 static 文件夹...")
+    if os.path.exists(OLD_STATIC_DIR):
+        shutil.copytree(OLD_STATIC_DIR, STATIC_DIR)
+    
+    print("初始化完成！所有文件已复制到新位置。")
+else:
+    print(f"snapData 目录已存在: {SNAP_DATA_DIR}")
+
+# 确保所有目录存在
+os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(STATIC_DIR, exist_ok=True)
 
 def _data_file(name, seed=None, migrate=True):
     """返回 DATA_DIR 下的数据文件路径。
@@ -295,6 +328,14 @@ def handle_capture_screenshot(data):
         
         # Capture the screen
         screenshot = pyautogui.screenshot()
+
+        # 保存到用户图片文件夹/snapPic
+        save_dir = os.path.expanduser("~/Pictures/snapPic")
+        os.makedirs(save_dir, exist_ok=True)
+        file_name = f"snap_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        full_path = os.path.join(save_dir, file_name)
+        screenshot.save(full_path)
+
         
         # Convert the image to base64 string
         buffered = BytesIO()

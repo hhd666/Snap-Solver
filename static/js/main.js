@@ -187,7 +187,7 @@ class SnapSolver {
                 viewMode: 1,
                 dragMode: 'crop',        // 拖动即画新框
                 autoCrop: true,
-                autoCropArea: 0.6,
+                autoCropArea: 1,
                 zoomable: true,
                 zoomOnTouch: true,
                 zoomOnWheel: true,
@@ -209,7 +209,7 @@ class SnapSolver {
                     else {
                         
                         self.isFristCapture = false;  // 首次截屏提示后置为 false
-                        self.sendForSolve();  // 框选完即发起解题
+                        
                     }
                 }
             });
@@ -807,6 +807,7 @@ class SnapSolver {
             this.hasAnswer = false;
             this.resetFollowups();
             this.setView('empty');
+            this.triggerCapture()
         });
 
         // 完成后的动作行（设计 4a：重解 / 换模型重解 / 复制）

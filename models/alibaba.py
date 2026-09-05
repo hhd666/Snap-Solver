@@ -11,12 +11,20 @@ class AlibabaModel(BaseModel):
         # 在super().__init__之前设置model_name，这样get_default_system_prompt能使用它
         super().__init__(api_key, temperature, system_prompt, language, reasoning_tier=reasoning_tier)
         self.api_base_url = api_base_url  # 存储API基础URL
+        # 外部思考模式=off 是"强制关闭思考"档位，base 校验只认 fast/deep/max，
+        # 这里把被 base 兜底成 deep 的 off 还原，供 _reasoning_extra_body / _is_thinking_model 识别
+        if reasoning_tier == 'off':
+            self.reasoning_tier = 'off'
 
     def _reasoning_extra_body(self) -> dict:
-        """将 fast/deep/max 映射为 DashScope 的 enable_thinking + thinking_budget。
-        qvq-max 等纯思考模型强制开启思考，且没有 fast 档。"""
+        """将 fast/deep/max/off 映射为 DashScope 的 enable_thinking + thinking_budget。
+        off（外部思考模式=关闭）强制关闭思考，连 qvq 纯思考模型也照关；
+        qvq-max 等纯思考模型在 fast/deep/max 下强制开启思考，且没有 fast 档。"""
         model_id = self.get_model_identifier().lower()
         tier = self.reasoning_tier
+        # 外部思考模式 = off → 强制关闭思考（不受 qvq 纯思考模型限制）
+        if tier == 'off':
+            return {'enable_thinking': False}
         # 视觉推理专用模型不可关闭思考
         thinking_only = "qvq" in model_id
         if tier == 'fast' and not thinking_only:
@@ -67,6 +75,8 @@ class AlibabaModel(BaseModel):
 
     def _is_thinking_model(self) -> bool:
         """当前模型是否会产生 reasoning_content（思考过程）"""
+        if self.reasoning_tier == 'off':
+            return False
         return self.reasoning_tier != 'fast' or 'qvq' in self.get_model_identifier().lower()
 
     def analyze_text(self, text: str, proxies: dict = None) -> Generator[dict, None, None]:
